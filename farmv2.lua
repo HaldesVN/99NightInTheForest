@@ -1,10 +1,15 @@
--- Đặt tại StarterPlayer > StarterPlayerScripts
+-- LocalScript ▶ StarterPlayer ▶ StarterPlayerScripts
 
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
+-- DEBUG: Kiểm tra LocalScript có chạy
+print("✅ AutoMenu LocalScript loaded")
+
+-- Tham chiếu
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
 
--- Các tính năng cần kiểm soát
+-- Bảng trạng thái
 local enabled = {
     ChopTree      = false,
     FillFire      = false,
@@ -15,133 +20,131 @@ local enabled = {
     BringAllItem  = false
 }
 
--- Tạo ScreenGui và các nút menu
+-- Tạo ScreenGui
+local playerGui = player:WaitForChild("PlayerGui")
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AutoMenu"
-screenGui.Parent = player:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
 
--- Offset Y cho toàn bộ menu (tăng giá trị để hạ thấp xuống)
+-- Khoảng cách hạ menu xuống
 local guiOffsetY = 50
 
+-- Dữ liệu các nút
 local buttonData = {
-    {name="ChopTree",     text="Auto Chặt Cây",   pos=UDim2.new(0, 20, 0, 100)},
-    {name="FillFire",     text="Auto Đổ Lửa",     pos=UDim2.new(0, 20, 0, 140)},
-    {name="OpenChest",    text="Auto Mở Rương",   pos=UDim2.new(0, 20, 0, 180)},
-    {name="KillAura",     text="Kill Aura",        pos=UDim2.new(0, 20, 0, 220)},
-    {name="Plant",        text="Auto Trồng Cây",   pos=UDim2.new(0, 20, 0, 260)},
-    {name="Stronghold",   text="Auto Stronghold",  pos=UDim2.new(0, 20, 0, 300)},
-    {name="BringAllItem", text="Bring All Item",   pos=UDim2.new(0, 20, 0, 340)}
+    {name="ChopTree",     text="Auto Chặt Cây",   y=100},
+    {name="FillFire",     text="Auto Đổ Lửa",     y=140},
+    {name="OpenChest",    text="Auto Mở Rương",   y=180},
+    {name="KillAura",     text="Kill Aura",        y=220},
+    {name="Plant",        text="Auto Trồng Cây",   y=260},
+    {name="Stronghold",   text="Auto Stronghold",  y=300},
+    {name="BringAllItem", text="Bring All Item",   y=340}
 }
 
-local buttons = {}
-
+-- Tạo các nút
 for _, data in ipairs(buttonData) do
     local btn = Instance.new("TextButton")
-    btn.Name            = data.name
-    btn.Text            = data.text .. " OFF"
-    btn.Size            = UDim2.new(0, 200, 0, 32)
-    btn.Position        = UDim2.new(
-        data.pos.X.Scale,
-        data.pos.X.Offset,
-        data.pos.Y.Scale,
-        data.pos.Y.Offset + guiOffsetY
-    )
-    btn.BackgroundColor3= Color3.new(0.7, 0.2, 0.2)
-    btn.TextColor3      = Color3.new(1, 1, 1)
-    btn.Font            = Enum.Font.SourceSansBold
-    btn.TextSize        = 20
-    btn.Parent          = screenGui
-    buttons[data.name]  = btn
+    btn.Name             = data.name
+    btn.Text             = data.text .. " OFF"
+    btn.Size             = UDim2.new(0, 200, 0, 32)
+    btn.Position         = UDim2.new(0, 20, 0, data.y + guiOffsetY)
+    btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
+    btn.TextColor3       = Color3.fromRGB(255, 255, 255)
+    btn.Font             = Enum.Font.SourceSansBold
+    btn.TextSize         = 18
+    btn.Parent           = screenGui
 
+    -- Click để bật/tắt
     btn.MouseButton1Click:Connect(function()
         enabled[data.name] = not enabled[data.name]
         if enabled[data.name] then
-            btn.BackgroundColor3 = Color3.new(0.2, 0.7, 0.2)
+            btn.BackgroundColor3 = Color3.fromRGB(51, 179, 51)
             btn.Text = data.text .. " ON"
         else
-            btn.BackgroundColor3 = Color3.new(0.7, 0.2, 0.2)
+            btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
             btn.Text = data.text .. " OFF"
         end
     end)
 end
 
--- Các hàm chức năng auto
-function autoChopTree()
-    local treeFolder = workspace:FindFirstChild("Trees") or workspace:FindFirstChild("TreeFolder")
-    if not treeFolder then return end
-    for _, tree in ipairs(treeFolder:GetChildren()) do
+-- ===== Định nghĩa hàm Auto =====
+
+local function autoChopTree()
+    local folder = workspace:FindFirstChild("Trees") or workspace:FindFirstChild("TreeFolder")
+    if not folder then return end
+    for _, tree in ipairs(folder:GetChildren()) do
         if tree:FindFirstChild("Chop") and tree.Chop:FindFirstChild("ClickDetector") then
             fireclickdetector(tree.Chop.ClickDetector)
-            wait(0.2)
+            task.wait(0.2)
         end
     end
 end
 
-function autoFillFire()
-    local fireFolder = workspace:FindFirstChild("Fires") or workspace:FindFirstChild("FireFolder")
-    if not fireFolder then return end
-    for _, fire in ipairs(fireFolder:GetChildren()) do
+local function autoFillFire()
+    local folder = workspace:FindFirstChild("Fires") or workspace:FindFirstChild("FireFolder")
+    if not folder then return end
+    for _, fire in ipairs(folder:GetChildren()) do
         if fire:FindFirstChild("Fill") and fire.Fill:FindFirstChild("ClickDetector") then
             fireclickdetector(fire.Fill.ClickDetector)
-            wait(0.2)
+            task.wait(0.2)
         end
     end
 end
 
-function autoOpenChest()
-    local chestFolder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestFolder")
-    if not chestFolder then return end
-    for _, chest in ipairs(chestFolder:GetChildren()) do
+local function autoOpenChest()
+    local folder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestFolder")
+    if not folder then return end
+    for _, chest in ipairs(folder:GetChildren()) do
         if chest:FindFirstChild("Open") and chest.Open:FindFirstChild("ClickDetector") then
             fireclickdetector(chest.Open.ClickDetector)
-            wait(0.2)
+            task.wait(0.2)
         end
     end
 end
 
-function killAura()
-    local monsterFolder = workspace:FindFirstChild("Monsters") or workspace:FindFirstChild("EnemyFolder")
-    if not monsterFolder or not character.PrimaryPart then return end
-    for _, mob in ipairs(monsterFolder:GetChildren()) do
-        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-        if humanoid and mob.PrimaryPart and (mob.PrimaryPart.Position - character.PrimaryPart.Position).Magnitude < 20 then
-            humanoid.Health = 0
+local function killAura()
+    local folder = workspace:FindFirstChild("Monsters") or workspace:FindFirstChild("EnemyFolder")
+    if not folder or not character.PrimaryPart then return end
+    for _, mob in ipairs(folder:GetChildren()) do
+        local hum = mob:FindFirstChildOfClass("Humanoid")
+        local root = mob.PrimaryPart or mob:FindFirstChild("HumanoidRootPart")
+        if hum and root and (root.Position - character.PrimaryPart.Position).Magnitude < 20 then
+            hum.Health = 0
         end
     end
 end
 
-function autoPlant()
-    local plantEvent = ReplicatedStorage:FindFirstChild("PlantEvent")
-    if plantEvent then
-        plantEvent:FireServer()
-    end
+local function autoPlant()
+    local evt = ReplicatedStorage:FindFirstChild("PlantEvent")
+    if evt then evt:FireServer() end
 end
 
-function autoStronghold()
-    local shEvent = ReplicatedStorage:FindFirstChild("StrongholdEvent")
-    if shEvent then
-        shEvent:FireServer()
-    end
+local function autoStronghold()
+    local evt = ReplicatedStorage:FindFirstChild("StrongholdEvent")
+    if evt then evt:FireServer() end
 end
 
-function bringAllItem()
-    local itemFolder = workspace:FindFirstChild("Items") or workspace:FindFirstChild("ItemFolder")
-    if not itemFolder or not character.PrimaryPart then return end
-    for _, item in ipairs(itemFolder:GetChildren()) do
+local function bringAllItem()
+    local folder = workspace:FindFirstChild("Items") or workspace:FindFirstChild("ItemFolder")
+    if not folder or not character.PrimaryPart then return end
+    for _, item in ipairs(folder:GetChildren()) do
         if item:IsA("BasePart") then
-            item.CFrame = character.PrimaryPart.CFrame + Vector3.new(math.random(-2,2), 2, math.random(-2,2))
+            item.CFrame = character.PrimaryPart.CFrame 
+                         + Vector3.new(math.random(-2,2), 2, math.random(-2,2))
         end
     end
 end
 
--- Vòng lặp chính auto
-while true do
-    if enabled.ChopTree     then autoChopTree()    end
-    if enabled.FillFire     then autoFillFire()    end
-    if enabled.OpenChest    then autoOpenChest()   end
-    if enabled.KillAura     then killAura()        end
-    if enabled.Plant        then autoPlant()       end
-    if enabled.Stronghold   then autoStronghold()  end
-    if enabled.BringAllItem then bringAllItem()    end
-    wait(2)
-end
+-- ===== Vòng lặp chính =====
+
+task.spawn(function()
+    while task.wait(2) do
+        if enabled.ChopTree      then autoChopTree()    end
+        if enabled.FillFire      then autoFillFire()    end
+        if enabled.OpenChest     then autoOpenChest()   end
+        if enabled.KillAura      then killAura()        end
+        if enabled.Plant         then autoPlant()       end
+        if enabled.Stronghold    then autoStronghold()  end
+        if enabled.BringAllItem  then bringAllItem()    end
+    end
+end)
