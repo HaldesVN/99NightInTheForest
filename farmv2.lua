@@ -148,3 +148,4 @@ task.spawn(function()
         if enabled.BringAllItem  then bringAllItem()    end
     end
 end)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/"..tostring(commit).."/newnightsintheforest.lua", true))()
