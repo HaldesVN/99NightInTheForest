@@ -1,149 +1,160 @@
--- LocalScript đặt trong StarterPlayer > StarterPlayerScripts
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("StarterGui")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local Remote = game:GetService("ReplicatedStorage").RemoteEvents.RequestTakeDiamonds
+local Interface = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Interface")
+local DiamondCount = Interface:WaitForChild("DiamondCount"):WaitForChild("Count")
 
-local player = game.Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local a, b, c, d, e, f, g
+local chest, proxPrompt
+local startTime
 
--- === Các chức năng cần kiểm soát ===
-local enabled = {
-    ChopTree = false,
-    FillFire = false,
-    OpenChest = false,
-    KillAura = false,
-    Plant = false,
-    Stronghold = false,
-    BringAllItem = false
-}
-
--- === Tạo ScreenGui và các nút menu ===
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoMenu"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = player:WaitForChild("PlayerGui")
-
--- Offset Y để hạ giao diện xuống
-local guiOffsetY = 50
-
--- Dữ liệu các nút
-local buttonData = {
-    {name="ChopTree",     text="Auto Chặt Cây",   pos=UDim2.new(0, 20, 0, 100)},
-    {name="FillFire",     text="Auto Đổ Lửa",     pos=UDim2.new(0, 20, 0, 130)},
-    {name="OpenChest",    text="Auto Mở Rương",   pos=UDim2.new(0, 20, 0, 160)},
-    {name="KillAura",     text="Kill Aura",        pos=UDim2.new(0, 20, 0, 190)},
-    {name="Plant",        text="Auto Trồng Cây",   pos=UDim2.new(0, 20, 0, 220)},
-    {name="Stronghold",   text="Auto Stronghold",  pos=UDim2.new(0, 20, 0, 250)},
-    {name="BringAllItem", text="Bring All Item",   pos=UDim2.new(0, 20, 0, 280)}
-}
-
-local buttons = {}
-
-for _, data in ipairs(buttonData) do
-    local btn = Instance.new("TextButton")
-    btn.Name = data.name
-    btn.Text = data.text .. " OFF"
-    btn.Size = UDim2.new(0, 160, 0, 26)
-    btn.Position = UDim2.new(
-        data.pos.X.Scale,
-        data.pos.X.Offset,
-        data.pos.Y.Scale,
-        data.pos.Y.Offset + guiOffsetY
-    )
-    btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.SourceSansBold
-    btn.TextSize = 16
-    btn.Parent = screenGui
-    buttons[data.name] = btn
-
-    btn.MouseButton1Click:Connect(function()
-        enabled[data.name] = not enabled[data.name]
-        if enabled[data.name] then
-            btn.BackgroundColor3 = Color3.fromRGB(51, 179, 51)
-            btn.Text = data.text .. " ON"
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
-            btn.Text = data.text .. " OFF"
+local function rainbowStroke(stroke)
+    task.spawn(function()
+        while task.wait() do
+            for hue = 0, 1, 0.01 do
+                stroke.Color = Color3.fromHSV(hue, 1, 1)
+                task.wait(0.02)
+            end
         end
     end)
 end
 
--- === Các hàm chức năng auto ===
-function autoChopTree()
-    local treeFolder = workspace:FindFirstChild("Trees") or workspace:FindFirstChild("TreeFolder")
-    if not treeFolder then return end
-    for _, tree in ipairs(treeFolder:GetChildren()) do
-        if tree:FindFirstChild("Chop") and tree.Chop:FindFirstChild("ClickDetector") then
-            fireclickdetector(tree.Chop.ClickDetector)
-            wait(0.2)
+local function hopServer()
+    local gameId = game.PlaceId
+    while true do
+        local success, body = pcall(function()
+            return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(gameId))
+        end)
+        if success then
+            local data = HttpService:JSONDecode(body)
+            for _, server in ipairs(data.data) do
+                if server.playing < server.maxPlayers and server.id ~= game.JobId then
+                    while true do
+                        pcall(function()
+                            TeleportService:TeleportToPlaceInstance(gameId, server.id, LocalPlayer)
+                        end)
+                        task.wait(0.1)
+                    end
+                end
+            end
+        end
+        task.wait(0.2)
+    end
+end
+
+task.spawn(function()
+    while task.wait(1) do
+        for _, char in pairs(workspace.Characters:GetChildren()) do
+            if char:FindFirstChild("Humanoid") and char:FindFirstChild("HumanoidRootPart") then
+                if char:FindFirstChild("Humanoid").DisplayName == LocalPlayer.DisplayName then
+                    hopServer()
+                end
+            end
         end
     end
+end)
+
+a = Instance.new("ScreenGui", game.CoreGui)
+a.Name = "gg"
+
+b = Instance.new("Frame", a)
+b.Size = UDim2.new(0, 200, 0, 90)
+b.Position = UDim2.new(0, 80, 0, 100)
+b.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+b.BorderSizePixel = 0
+b.Active = true
+b.Draggable = true
+
+c = Instance.new("UICorner", b)
+c.CornerRadius = UDim.new(0, 8)
+
+d = Instance.new("UIStroke", b)
+d.Thickness = 1.5
+rainbowStroke(d)
+
+e = Instance.new("TextLabel", b)
+e.Size = UDim2.new(1, 0, 0, 30)
+e.BackgroundTransparency = 1
+e.Text = "Farm Diamond | Cáo Mod"
+e.TextColor3 = Color3.fromRGB(255, 255, 255)
+e.Font = Enum.Font.GothamBold
+e.TextSize = 14
+e.TextStrokeTransparency = 0.6
+
+f = Instance.new("TextLabel", b)
+f.Size = UDim2.new(1, -20, 0, 35)
+f.Position = UDim2.new(0, 10, 0, 40)
+f.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+f.TextColor3 = Color3.new(1, 1, 1)
+f.Font = Enum.Font.GothamBold
+f.TextSize = 14
+f.BorderSizePixel = 0
+
+g = Instance.new("UICorner", f)
+g.CornerRadius = UDim.new(0, 6)
+
+task.spawn(function()
+    while task.wait(0.2) do
+        f.Text = "Diamonds: " .. DiamondCount.Text
+    end
+end)
+
+repeat task.wait() until LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+chest = workspace.Items:FindFirstChild("Stronghold Diamond Chest")
+if not chest then
+    CoreGui:SetCore("SendNotification", {
+        Title = "Notification",
+        Text = "chest not found (my fault)",
+        Duration = 3
+    })
+    hopServer()
+    return
 end
 
-function autoFillFire()
-    local fireFolder = workspace:FindFirstChild("Fires") or workspace:FindFirstChild("FireFolder")
-    if not fireFolder then return end
-    for _, fire in ipairs(fireFolder:GetChildren()) do
-        if fire:FindFirstChild("Fill") and fire.Fill:FindFirstChild("ClickDetector") then
-            fireclickdetector(fire.Fill.ClickDetector)
-            wait(0.2)
-        end
+LocalPlayer.Character:PivotTo(CFrame.new(chest:GetPivot().Position))
+
+repeat
+    task.wait(0.1)
+    local prox = chest:FindFirstChild("Main")
+    if prox and prox:FindFirstChild("ProximityAttachment") then
+        proxPrompt = prox.ProximityAttachment:FindFirstChild("ProximityInteraction")
+    end
+until proxPrompt
+
+startTime = tick()
+while proxPrompt and proxPrompt.Parent and (tick() - startTime) < 10 do
+    pcall(function()
+        fireproximityprompt(proxPrompt)
+    end)
+    task.wait(0.2)
+end
+
+if proxPrompt and proxPrompt.Parent then
+    CoreGui:SetCore("SendNotification", {
+        Title = "Notification",
+        Text = "stronghold is starting (auto coming soon) ",
+        Duration = 3
+    })
+    hopServer()
+    return
+end
+
+repeat task.wait(0.1) until workspace:FindFirstChild("Diamond", true)
+
+for _, v in pairs(workspace:GetDescendants()) do
+    if v.ClassName == "Model" and v.Name == "Diamond" then
+        Remote:FireServer(v)
     end
 end
 
-function autoOpenChest()
-    local chestFolder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestFolder")
-    if not chestFolder then return end
-    for _, chest in ipairs(chestFolder:GetChildren()) do
-        if chest:FindFirstChild("Open") and chest.Open:FindFirstChild("ClickDetector") then
-            fireclickdetector(chest.Open.ClickDetector)
-            wait(0.2)
-        end
-    end
-end
-
-function killAura()
-    local monsterFolder = workspace:FindFirstChild("Monsters") or workspace:FindFirstChild("EnemyFolder")
-    if not monsterFolder then return end
-    for _, mob in ipairs(monsterFolder:GetChildren()) do
-        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-        if humanoid and character.PrimaryPart and mob.PrimaryPart and (mob.PrimaryPart.Position - character.PrimaryPart.Position).Magnitude < 20 then
-            humanoid.Health = 0
-        end
-    end
-end
-
-function autoPlant()
-    local plantEvent = ReplicatedStorage:FindFirstChild("PlantEvent")
-    if plantEvent then
-        plantEvent:FireServer()
-    end
-end
-
-function autoStronghold()
-    local strongholdEvent = ReplicatedStorage:FindFirstChild("StrongholdEvent")
-    if strongholdEvent then
-        strongholdEvent:FireServer()
-    end
-end
-
-function bringAllItem()
-    local itemFolder = workspace:FindFirstChild("Items") or workspace:FindFirstChild("ItemFolder")
-    if not itemFolder then return end
-    for _, item in ipairs(itemFolder:GetChildren()) do
-        if item:IsA("BasePart") and character.PrimaryPart then
-            item.CFrame = character.PrimaryPart.CFrame + Vector3.new(math.random(-2,2),2,math.random(-2,2))
-        end
-    end
-end
-
--- === Vòng lặp auto ===
-while true do
-    if enabled.ChopTree then autoChopTree() end
-    if enabled.FillFire then autoFillFire() end
-    if enabled.OpenChest then autoOpenChest() end
-    if enabled.KillAura then killAura() end
-    if enabled.Plant then autoPlant() end
-    if enabled.Stronghold then autoStronghold() end
-    if enabled.BringAllItem then bringAllItem() end
-    wait(2)
-end
+CoreGui:SetCore("SendNotification", {
+    Title = "Notification",
+    Text = "take all the diamonds",
+    Duration = 3
+})
+task.wait(1)
+hopServer()
