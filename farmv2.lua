@@ -38,28 +38,28 @@ local AutoChestTPEnabled = false
 local BringAllEnabled = false
 
 -------------------------------------------------
--- AUTO CHẶT CÂY (Small Tree, Big Tree)
+-- AUTO CHẶT CÂY (Đứng một chỗ, chặt nhiều cây cùng lúc)
 -------------------------------------------------
 task.spawn(function()
     while true do
         if AutoTreeEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent and (obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree") then
-                    -- Teleport & click
-                    LocalPlayer.Character:PivotTo(obj.CFrame + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    for i=1,8 do
-                        if obj:FindFirstChildOfClass("ClickDetector") then
-                            fireclickdetector(obj:FindFirstChildOfClass("ClickDetector"))
-                        elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                            fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent and (obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree") then
+                        -- Chỉ chặt cây trong phạm vi 25 studs xung quanh
+                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                            if obj:FindFirstChildOfClass("ClickDetector") then
+                                fireclickdetector(obj:FindFirstChildOfClass("ClickDetector"))
+                            elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                            end
                         end
-                        task.wait(0.13)
                     end
                 end
             end
         end
-        task.wait(2)
+        task.wait(0.4) -- Spam nhanh nhưng không quá lag
     end
 end)
 
@@ -69,18 +69,20 @@ end)
 task.spawn(function()
     while true do
         if AutoFireEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
-                    -- Teleport & use
-                    LocalPlayer.Character:PivotTo(obj.CFrame + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
+                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(3)
+        task.wait(1)
     end
 end)
 
@@ -90,19 +92,22 @@ end)
 task.spawn(function()
     while true do
         if AutoChestEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name:lower():find("chest") then
-                    LocalPlayer.Character:PivotTo(obj:GetPivot().Position + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    if obj:FindFirstChildWhichIsA("ClickDetector") then
-                        fireclickdetector(obj:FindFirstChildWhichIsA("ClickDetector"))
-                    elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name:lower():find("chest") then
+                        if obj:GetPivot() and (obj:GetPivot().Position - hrp.Position).Magnitude < 30 then
+                            if obj:FindFirstChildWhichIsA("ClickDetector") then
+                                fireclickdetector(obj:FindFirstChildWhichIsA("ClickDetector"))
+                            elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(2)
+        task.wait(1)
     end
 end)
 
@@ -113,21 +118,24 @@ local KillTargets = {"Wolf", "Alpha Wolf", "Bear", "Cultist", "Crossbow Cultist"
 task.spawn(function()
     while true do
         if AutoKillEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Model") and table.find(KillTargets, obj.Name) and obj:FindFirstChild("HumanoidRootPart") then
-                    LocalPlayer.Character:PivotTo(obj.HumanoidRootPart.CFrame + Vector3.new(0, 5, 0))
-                    task.wait(0.2)
-                    -- Simulate attack (press F repeatedly)
-                    for i=1,12 do
-                        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
-                        task.wait(0.08)
-                        game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                        task.wait(0.03)
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj:IsA("Model") and table.find(KillTargets, obj.Name) and obj:FindFirstChild("HumanoidRootPart") then
+                        if (obj.HumanoidRootPart.Position - hrp.Position).Magnitude < 20 then
+                            -- Simulate attack (press F repeatedly)
+                            for i=1,6 do
+                                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                                task.wait(0.08)
+                                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                                task.wait(0.03)
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(2)
+        task.wait(0.3)
     end
 end)
 
@@ -137,17 +145,20 @@ end)
 task.spawn(function()
     while true do
         if AutoPlantEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name == "Seed Box" or obj.Name == "Sapling" then
-                    LocalPlayer.Character:PivotTo(obj.CFrame + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name == "Seed Box" or obj.Name == "Sapling" then
+                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(4)
+        task.wait(1)
     end
 end)
 
@@ -157,21 +168,24 @@ end)
 task.spawn(function()
     while true do
         if AutoCookEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
-                    LocalPlayer.Character:PivotTo(obj.CFrame + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                        -- Simulate press E to cook
-                        game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                        task.wait(0.12)
-                        game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game)
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
+                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                                -- Simulate press E to cook
+                                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game)
+                                task.wait(0.12)
+                                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game)
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(5)
+        task.wait(1)
     end
 end)
 
@@ -181,17 +195,20 @@ end)
 task.spawn(function()
     while true do
         if AutoStrongholdEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name == "Stronghold Diamond Chest" then
-                    LocalPlayer.Character:PivotTo(obj:GetPivot().Position + Vector3.new(0, 3, 0))
-                    task.wait(0.2)
-                    if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name == "Stronghold Diamond Chest" then
+                        if obj:GetPivot() and (obj:GetPivot().Position - hrp.Position).Magnitude < 35 then
+                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
+                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                            end
+                        end
                     end
                 end
             end
         end
-        task.wait(4)
+        task.wait(1)
     end
 end)
 
@@ -201,14 +218,24 @@ end)
 task.spawn(function()
     while true do
         if AutoChestTPEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj.Name:lower():find("chest") then
-                    LocalPlayer.Character:PivotTo(obj:GetPivot().Position + Vector3.new(0, 5, 0))
-                    task.wait(0.4)
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            local closest, shortest = nil, math.huge
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj.Name:lower():find("chest") and obj:GetPivot() then
+                        local dist = (obj:GetPivot().Position - hrp.Position).Magnitude
+                        if dist < shortest then
+                            shortest = dist
+                            closest = obj
+                        end
+                    end
+                end
+                if closest then
+                    LocalPlayer.Character:PivotTo(closest:GetPivot().Position + Vector3.new(0, 5, 0))
                 end
             end
         end
-        task.wait(6)
+        task.wait(5)
     end
 end)
 
@@ -218,10 +245,13 @@ end)
 task.spawn(function()
     while true do
         if BringAllEnabled then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                if obj:IsA("Model") and obj:FindFirstChildWhichIsA("BasePart") and obj ~= LocalPlayer.Character then
-                    local base = obj:FindFirstChildWhichIsA("BasePart")
-                    base.CFrame = LocalPlayer.Character.HumanoidRootPart.CFrame + Vector3.new(math.random(-5,5), 3, math.random(-5,5))
+            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if hrp then
+                for _, obj in pairs(workspace:GetDescendants()) do
+                    if obj:IsA("Model") and obj:FindFirstChildWhichIsA("BasePart") and obj ~= LocalPlayer.Character then
+                        local base = obj:FindFirstChildWhichIsA("BasePart")
+                        base.CFrame = hrp.CFrame + Vector3.new(math.random(-5,5), 3, math.random(-5,5))
+                    end
                 end
             end
         end
@@ -235,7 +265,7 @@ end)
 local Tab = Window:CreateTab("MultiFarm", 4483362458)
 
 Tab:CreateToggle({
-    Name = "Auto Chặt Cây",
+    Name = "Auto Chặt Cây (Đứng một chỗ)",
     CurrentValue = false,
     Callback = function(v) AutoTreeEnabled = v end
 })
