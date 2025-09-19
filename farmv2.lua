@@ -1,51 +1,3 @@
-
---== Rayfield UI Integration ==--
-
--- 1. Load Rayfield
-local Rayfield = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/enjoythejax/Rayfield/main/source"
-))()
-
--- 2. Create main window
-local Window = Rayfield:CreateWindow({
-    Name = "99 Nights Hub",
-    LoadingTitle = "99 Nights In The Forest",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = "99NightsHub",
-        FileName = "Settings"
-    }
-})
-
--- 3. Create “Auto Features” tab
-local AutoTab = Window:CreateTab("Auto Features")
-
--- 4. List of feature flags & labels
-local features = {
-    { flag = "ChopTree",     label = "Auto Chặt Cây"      },
-    { flag = "FillFire",     label = "Auto Đổ Lửa"        },
-    { flag = "OpenChest",    label = "Auto Mở Rương"      },
-    { flag = "KillAura",     label = "Kill Aura"           },
-    { flag = "Plant",        label = "Auto Trồng Cây"      },
-    { flag = "Stronghold",   label = "Auto Stronghold"     },
-    { flag = "BringAllItem", label = "Bring All Item"      }
-}
-
--- 5. Create a toggle for each feature
-for _, feat in ipairs(features) do
-    -- ensure the `enabled` table exists
-    enabled = enabled or {}
-    enabled[feat.flag] = enabled[feat.flag] or false
-
-    AutoTab:CreateToggle({
-        Name = feat.label,
-        CurrentValue = enabled[feat.flag],
-        Flag = feat.flag,
-        Callback = function(value)
-            enabled[feat.flag] = value
-        end
-    })
-end
 if not game:IsLoaded() then return end
 local CheatEngineMode = false
 if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
@@ -209,5 +161,3 @@ task.spawn(function()
         end
     end)
 end)
-
-local commit = shared.CustomCommit and tostring(shared.CustomCommit) or shared.StagingMode and "staging" or "3b3b6b58e840cad9ae32a59b77c15d89218c6147"
