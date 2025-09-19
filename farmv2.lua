@@ -1,22 +1,19 @@
---// 99 Nights MultiFarm Script with Rayfield GUI //--
+--// 99 Nights Auto Chop Tree Script with Rayfield GUI //--
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
-local camera = workspace.CurrentCamera
 
 local Window = Rayfield:CreateWindow({
-    Name = "99 Nights - MultiFarm",
-    LoadingTitle = "MultiFarm Script",
+    Name = "99 Nights - Auto Chop Tree",
+    LoadingTitle = "Auto Chop Tree Script",
     LoadingSubtitle = "by HaldesVN",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = nil,
-        FileName = "MultiFarmSettings"
+        FileName = "AutoChopTreeSettings"
     },
     Discord = {
         Enabled = false,
@@ -27,108 +24,68 @@ local Window = Rayfield:CreateWindow({
 })
 
 -- Variables
-local AutoTreeEnabled = false
-local AutoFireEnabled = false
-local AutoChestEnabled = false
-local AutoKillEnabled = false
-local AutoPlantEnabled = false
-local AutoCookEnabled = false
-local AutoStrongholdEnabled = false
-local AutoChestTPEnabled = false
-local BringAllEnabled = false
+local AutoChopEnabled = false
+local TreeType = "Small Tree" -- "Small Tree", "Big Tree", "All"
+local Distance = 18
 
--------------------------------------------------
--- AUTO CHẶT CÂY (Đứng một chỗ, chặt nhiều cây cùng lúc)
--------------------------------------------------
+-- Helper: Check tool
+local function isHoldingAxe()
+    local char = LocalPlayer.Character
+    if char then
+        local tool = char:FindFirstChildOfClass("Tool")
+        if tool and tool.Name:lower():find("axe") then
+            return true
+        end
+    end
+    return false
+end
+
+-- Helper: Get RemoteEvent for chopping (if available)
+local function getChopRemote()
+    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
+        if v:IsA("RemoteEvent") and v.Name:lower():find("chop") then
+            return v
+        end
+    end
+    return nil
+end
+
+-- Helper: Get HRP
+local function getHRP()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Chop tree logic
 task.spawn(function()
     while true do
-        if AutoTreeEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if AutoChopEnabled and isHoldingAxe() then
+            local hrp = getHRP()
+            local remote = getChopRemote()
             if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent and (obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree") then
-                        -- Chỉ chặt cây trong phạm vi 25 studs xung quanh
-                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                for _, obj in workspace:GetDescendants() do
+                    local valid = false
+                    if obj.Position and (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent then
+                        if TreeType == "All" then
+                            if obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree" then valid = true end
+                        else
+                            if obj.Parent.Name == TreeType then valid = true end
+                        end
+                    end
+                    if valid then
+                        local dist = (obj.Position - hrp.Position).Magnitude
+                        if dist <= Distance then
+                            -- RemoteEvent (nếu có)
+                            if remote then
+                                remote:FireServer(obj)
+                            end
+                            -- ClickDetector
                             if obj:FindFirstChildOfClass("ClickDetector") then
                                 fireclickdetector(obj:FindFirstChildOfClass("ClickDetector"))
-                            elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
                             end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(0.4) -- Spam nhanh nhưng không quá lag
-    end
-end)
-
--------------------------------------------------
--- AUTO FILL LỬA (Campfire, Firepit)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoFireEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
-                        if (obj.Position - hrp.Position).Magnitude < 25 then
+                            -- ProximityPrompt
                             if obj:FindFirstChildWhichIsA("ProximityPrompt") then
                                 fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(1)
-    end
-end)
-
--------------------------------------------------
--- AUTO RƯƠNG (Item Chest, Stronghold Chest)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoChestEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name:lower():find("chest") then
-                        if obj:GetPivot() and (obj:GetPivot().Position - hrp.Position).Magnitude < 30 then
-                            if obj:FindFirstChildWhichIsA("ClickDetector") then
-                                fireclickdetector(obj:FindFirstChildWhichIsA("ClickDetector"))
-                            elseif obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(1)
-    end
-end)
-
--------------------------------------------------
--- AUTO KILL (Wolf, Cultist, Bear...)
--------------------------------------------------
-local KillTargets = {"Wolf", "Alpha Wolf", "Bear", "Cultist", "Crossbow Cultist", "Polar Bear", "Bunny"}
-task.spawn(function()
-    while true do
-        if AutoKillEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("Model") and table.find(KillTargets, obj.Name) and obj:FindFirstChild("HumanoidRootPart") then
-                        if (obj.HumanoidRootPart.Position - hrp.Position).Magnitude < 20 then
-                            -- Simulate attack (press F repeatedly)
-                            for i=1,6 do
-                                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
-                                task.wait(0.08)
-                                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                                task.wait(0.03)
                             end
                         end
                     end
@@ -139,183 +96,42 @@ task.spawn(function()
     end
 end)
 
--------------------------------------------------
--- AUTO PLANT (Sapling, Seed Box)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoPlantEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name == "Seed Box" or obj.Name == "Sapling" then
-                        if (obj.Position - hrp.Position).Magnitude < 25 then
-                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(1)
+-- UI
+local Tab = Window:CreateTab("Auto Chop Tree", 4483362458)
+
+Tab:CreateDropdown({
+    Name = "Chọn Loại Cây",
+    Options = {"Small Tree", "Big Tree", "All"},
+    CurrentOption = "Small Tree",
+    Callback = function(option)
+        TreeType = option
+        Rayfield:Notify({Title="Loại Cây", Content="Đã chọn: " .. option, Duration=2})
     end
-end)
+})
 
--------------------------------------------------
--- AUTO COOK (Campfire/Firepit)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoCookEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name:lower():find("fire") or obj.Name:lower():find("campfire") or obj.Name:lower():find("firepit") then
-                        if (obj.Position - hrp.Position).Magnitude < 25 then
-                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                                -- Simulate press E to cook
-                                game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                                task.wait(0.12)
-                                game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(1)
+Tab:CreateSlider({
+    Name = "Khoảng Cách Chặt (Studs)",
+    Range = {8, 50},
+    Increment = 1,
+    Suffix = "Studs",
+    CurrentValue = Distance,
+    Callback = function(v)
+        Distance = v
+        Rayfield:Notify({Title="Khoảng cách", Content="Đã chọn: " .. v .. " studs", Duration=2})
     end
-end)
+})
 
--------------------------------------------------
--- AUTO STRONGHOLD (Stronghold Diamond Chest)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoStrongholdEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name == "Stronghold Diamond Chest" then
-                        if obj:GetPivot() and (obj:GetPivot().Position - hrp.Position).Magnitude < 35 then
-                            if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                                fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
-                            end
-                        end
-                    end
-                end
-            end
-        end
-        task.wait(1)
+Tab:CreateToggle({
+    Name = "Bật/Tắt Auto Chặt Cây",
+    CurrentValue = false,
+    Callback = function(v)
+        AutoChopEnabled = v
+        Rayfield:Notify({
+            Title = "Auto Chop Tree",
+            Content = v and "Đã bật auto chặt cây!" or "Đã tắt auto chặt cây!",
+            Duration = 3
+        })
     end
-end)
-
--------------------------------------------------
--- AUTO CHEST TELEPORT (Teleport liên tục tới chest)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if AutoChestTPEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            local closest, shortest = nil, math.huge
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj.Name:lower():find("chest") and obj:GetPivot() then
-                        local dist = (obj:GetPivot().Position - hrp.Position).Magnitude
-                        if dist < shortest then
-                            shortest = dist
-                            closest = obj
-                        end
-                    end
-                end
-                if closest then
-                    LocalPlayer.Character:PivotTo(closest:GetPivot().Position + Vector3.new(0, 5, 0))
-                end
-            end
-        end
-        task.wait(5)
-    end
-end)
-
--------------------------------------------------
--- BRING ALL (Kéo tất cả model về vị trí mình)
--------------------------------------------------
-task.spawn(function()
-    while true do
-        if BringAllEnabled then
-            local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                for _, obj in pairs(workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj:FindFirstChildWhichIsA("BasePart") and obj ~= LocalPlayer.Character then
-                        local base = obj:FindFirstChildWhichIsA("BasePart")
-                        base.CFrame = hrp.CFrame + Vector3.new(math.random(-5,5), 3, math.random(-5,5))
-                    end
-                end
-            end
-        end
-        task.wait(8)
-    end
-end)
-
--------------------------------------------------
--- GUI Toggle
--------------------------------------------------
-local Tab = Window:CreateTab("MultiFarm", 4483362458)
-
-Tab:CreateToggle({
-    Name = "Auto Chặt Cây (Đứng một chỗ)",
-    CurrentValue = false,
-    Callback = function(v) AutoTreeEnabled = v end
 })
 
-Tab:CreateToggle({
-    Name = "Auto Fill Lửa",
-    CurrentValue = false,
-    Callback = function(v) AutoFireEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Mở Rương",
-    CurrentValue = false,
-    Callback = function(v) AutoChestEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Kill",
-    CurrentValue = false,
-    Callback = function(v) AutoKillEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Plant",
-    CurrentValue = false,
-    Callback = function(v) AutoPlantEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Cook",
-    CurrentValue = false,
-    Callback = function(v) AutoCookEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Stronghold",
-    CurrentValue = false,
-    Callback = function(v) AutoStrongholdEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Auto Chest Teleport",
-    CurrentValue = false,
-    Callback = function(v) AutoChestTPEnabled = v end
-})
-
-Tab:CreateToggle({
-    Name = "Bring All",
-    CurrentValue = false,
-    Callback = function(v) BringAllEnabled = v end
-})
-
-Rayfield:Notify({Title="MultiFarm Loaded", Content="Đã bật GUI MultiFarm!", Duration=5})
+Rayfield:Notify({Title="Auto Chop Tree Loaded", Content="Script đã sẵn sàng!", Duration=3})
