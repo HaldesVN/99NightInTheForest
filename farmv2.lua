@@ -1,151 +1,167 @@
--- LocalScript ▶ StarterPlayer ▶ StarterPlayerScripts
-
--- DEBUG: Kiểm tra LocalScript có chạy
-print("✅ AutoMenu LocalScript loaded")
-
--- Tham chiếu
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-local character = player.Character or player.CharacterAdded:Wait()
-
--- Bảng trạng thái
-local enabled = {
-    ChopTree      = false,
-    FillFire      = false,
-    OpenChest     = false,
-    KillAura      = false,
-    Plant         = false,
-    Stronghold    = false,
-    BringAllItem  = false
+if not game:IsLoaded() then return end
+local CheatEngineMode = false
+if (not getgenv) or (getgenv and type(getgenv) ~= "function") then CheatEngineMode = true end
+if getgenv and not getgenv().shared then CheatEngineMode = true; getgenv().shared = {}; end
+if getgenv and not getgenv().debug then CheatEngineMode = true; getgenv().debug = {traceback = function(string) return string end} end
+if getgenv and not getgenv().require then CheatEngineMode = true; end
+if getgenv and getgenv().require and type(getgenv().require) ~= "function" then CheatEngineMode = true end
+local debugChecks = {
+    Type = "table",
+    Functions = {
+        "getupvalue",
+        "getupvalues",
+        "getconstants",
+        "getproto"
+    }
 }
-
--- Tạo ScreenGui
-local playerGui = player:WaitForChild("PlayerGui")
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "AutoMenu"
-screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
-
--- Khoảng cách hạ menu xuống
-local guiOffsetY = 50
-
--- Dữ liệu các nút
-local buttonData = {
-    {name="ChopTree",     text="Auto Chặt Cây",   y=100},
-    {name="FillFire",     text="Auto Đổ Lửa",     y=140},
-    {name="OpenChest",    text="Auto Mở Rương",   y=180},
-    {name="KillAura",     text="Kill Aura",        y=220},
-    {name="Plant",        text="Auto Trồng Cây",   y=260},
-    {name="Stronghold",   text="Auto Stronghold",  y=300},
-    {name="BringAllItem", text="Bring All Item",   y=340}
-}
-
--- Tạo các nút
-for _, data in ipairs(buttonData) do
-    local btn = Instance.new("TextButton")
-    btn.Name             = data.name
-    btn.Text             = data.text .. " OFF"
-    btn.Size             = UDim2.new(0, 200, 0, 32)
-    btn.Position         = UDim2.new(0, 20, 0, data.y + guiOffsetY)
-    btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
-    btn.TextColor3       = Color3.fromRGB(255, 255, 255)
-    btn.Font             = Enum.Font.SourceSansBold
-    btn.TextSize         = 18
-    btn.Parent           = screenGui
-
-    -- Click để bật/tắt
-    btn.MouseButton1Click:Connect(function()
-        enabled[data.name] = not enabled[data.name]
-        if enabled[data.name] then
-            btn.BackgroundColor3 = Color3.fromRGB(51, 179, 51)
-            btn.Text = data.text .. " ON"
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(179, 51, 51)
-            btn.Text = data.text .. " OFF"
+local function checkExecutor()
+    if identifyexecutor ~= nil and type(identifyexecutor) == "function" then
+        local suc, res = pcall(function()
+            return identifyexecutor()
+        end)   
+        --local blacklist = {'appleware', 'cryptic', 'delta', 'wave', 'codex', 'swift', 'solara', 'vega'}
+        local blacklist = {'solara', 'cryptic', 'xeno', 'ember', 'ronix'}
+        local core_blacklist = {'solara', 'xeno'}
+        if suc then
+            for i,v in pairs(blacklist) do
+                if string.find(string.lower(tostring(res)), v) then CheatEngineMode = true end
+            end
+            for i,v in pairs(core_blacklist) do
+                if string.find(string.lower(tostring(res)), v) then
+                    pcall(function()
+                        getgenv().queue_on_teleport = function() warn('queue_on_teleport disabled!') end
+                    end)
+                end
+            end
+            if string.find(string.lower(tostring(res)), "delta") then
+                getgenv().isnetworkowner = function()
+                    return true
+                end
+            end
         end
+    end
+end
+task.spawn(function() pcall(checkExecutor) end)
+local function checkDebug()
+    if CheatEngineMode then return end
+    if not getgenv().debug then 
+        CheatEngineMode = true 
+    else 
+        if type(debug) ~= debugChecks.Type then 
+            CheatEngineMode = true
+        else 
+            for i, v in pairs(debugChecks.Functions) do
+                if not debug[v] or (debug[v] and type(debug[v]) ~= "function") then 
+                    CheatEngineMode = true 
+                else
+                    local suc, res = pcall(debug[v]) 
+                    if tostring(res) == "Not Implemented" then 
+                        CheatEngineMode = true 
+                    end
+                end
+            end
+        end
+    end
+end
+--if (not CheatEngineMode) then checkDebug() end
+shared.CheatEngineMode = shared.CheatEngineMode or CheatEngineMode
+shared.ForcePlayerGui = true
+
+if game.PlaceId == 79546208627805 then
+    pcall(function()
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Voidware | 99 Nights In The Forest",
+            Text = "Go In Game for Voidware to load :D [You are in lobby currently]",
+            Duration = 10
+        })
     end)
-end
-
--- ===== Định nghĩa hàm Auto =====
-
-local function autoChopTree()
-    local folder = workspace:FindFirstChild("Trees") or workspace:FindFirstChild("TreeFolder")
-    if not folder then return end
-    for _, tree in ipairs(folder:GetChildren()) do
-        if tree:FindFirstChild("Chop") and tree.Chop:FindFirstChild("ClickDetector") then
-            fireclickdetector(tree.Chop.ClickDetector)
-            task.wait(0.2)
-        end
-    end
-end
-
-local function autoFillFire()
-    local folder = workspace:FindFirstChild("Fires") or workspace:FindFirstChild("FireFolder")
-    if not folder then return end
-    for _, fire in ipairs(folder:GetChildren()) do
-        if fire:FindFirstChild("Fill") and fire.Fill:FindFirstChild("ClickDetector") then
-            fireclickdetector(fire.Fill.ClickDetector)
-            task.wait(0.2)
-        end
-    end
-end
-
-local function autoOpenChest()
-    local folder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestFolder")
-    if not folder then return end
-    for _, chest in ipairs(folder:GetChildren()) do
-        if chest:FindFirstChild("Open") and chest.Open:FindFirstChild("ClickDetector") then
-            fireclickdetector(chest.Open.ClickDetector)
-            task.wait(0.2)
-        end
-    end
-end
-
-local function killAura()
-    local folder = workspace:FindFirstChild("Monsters") or workspace:FindFirstChild("EnemyFolder")
-    if not folder or not character.PrimaryPart then return end
-    for _, mob in ipairs(folder:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local root = mob.PrimaryPart or mob:FindFirstChild("HumanoidRootPart")
-        if hum and root and (root.Position - character.PrimaryPart.Position).Magnitude < 20 then
-            hum.Health = 0
-        end
-    end
-end
-
-local function autoPlant()
-    local evt = ReplicatedStorage:FindFirstChild("PlantEvent")
-    if evt then evt:FireServer() end
-end
-
-local function autoStronghold()
-    local evt = ReplicatedStorage:FindFirstChild("StrongholdEvent")
-    if evt then evt:FireServer() end
-end
-
-local function bringAllItem()
-    local folder = workspace:FindFirstChild("Items") or workspace:FindFirstChild("ItemFolder")
-    if not folder or not character.PrimaryPart then return end
-    for _, item in ipairs(folder:GetChildren()) do
-        if item:IsA("BasePart") then
-            item.CFrame = character.PrimaryPart.CFrame 
-                         + Vector3.new(math.random(-2,2), 2, math.random(-2,2))
-        end
-    end
-end
-
--- ===== Vòng lặp chính =====
+    return
+end 
 
 task.spawn(function()
-    while task.wait(2) do
-        if enabled.ChopTree      then autoChopTree()    end
-        if enabled.FillFire      then autoFillFire()    end
-        if enabled.OpenChest     then autoOpenChest()   end
-        if enabled.KillAura      then killAura()        end
-        if enabled.Plant         then autoPlant()       end
-        if enabled.Stronghold    then autoStronghold()  end
-        if enabled.BringAllItem  then bringAllItem()    end
-    end
+    pcall(function()
+        local Services = setmetatable({}, {
+            __index = function(self, key)
+                local suc, service = pcall(game.GetService, game, key)
+                if suc and service then
+                    self[key] = service
+                    return service
+                else
+                    warn(`[Services] Warning: "{key}" is not a valid Roblox service.`)
+                    return nil
+                end
+            end
+        })
+
+        local Players = Services.Players
+        local TextChatService = Services.TextChatService
+        local ChatService = Services.ChatService
+        repeat
+            task.wait()
+        until game:IsLoaded() and Players.LocalPlayer ~= nil
+        local chatVersion = TextChatService and TextChatService.ChatVersion or Enum.ChatVersion.LegacyChatService
+        local TagRegister = shared.TagRegister or {}
+        if not shared.CheatEngineMode then
+            if chatVersion == Enum.ChatVersion.TextChatService then
+                TextChatService.OnIncomingMessage = function(data)
+                    TagRegister = shared.TagRegister or {}
+                    local properties = Instance.new("TextChatMessageProperties", game:GetService("Workspace"))
+                    local TextSource = data.TextSource
+                    local PrefixText = data.PrefixText or ""
+                    if TextSource then
+                        local plr = Players:GetPlayerByUserId(TextSource.UserId)
+                        if plr then
+                            local prefix = ""
+                            if TagRegister[plr] then
+                                prefix = prefix .. TagRegister[plr]
+                            end
+                            if plr:GetAttribute("__OwnsVIPGamepass") and plr:GetAttribute("VIPChatTag") ~= false then
+                                prefix = prefix .. "<font color='rgb(255,210,75)'>[VIP]</font> "
+                            end
+                            local currentLevel = plr:GetAttribute("_CurrentLevel")
+                            if currentLevel then
+                                prefix = prefix .. string.format("<font color='rgb(173,216,230)'>[</font><font color='rgb(255,255,255)'>%s</font><font color='rgb(173,216,230)'>]</font> ", tostring(currentLevel))
+                            end
+                            local playerTagValue = plr:FindFirstChild("PlayerTagValue")
+                            if playerTagValue and playerTagValue.Value then
+                                prefix = prefix .. string.format("<font color='rgb(173,216,230)'>[</font><font color='rgb(255,255,255)'>#%s</font><font color='rgb(173,216,230)'>]</font> ", tostring(playerTagValue.Value))
+                            end
+                            prefix = prefix .. PrefixText
+                            properties.PrefixText = string.format("<font color='rgb(255,255,255)'>%s</font>", prefix)
+                        end
+                    end
+                    return properties
+                end
+            elseif chatVersion == Enum.ChatVersion.LegacyChatService then
+                ChatService:RegisterProcessCommandsFunction("CustomPrefix", function(speakerName, message)
+                    TagRegister = shared.TagRegister or {}
+                    local plr = Players:FindFirstChild(speakerName)
+                    if plr then
+                        local prefix = ""
+                        if TagRegister[plr] then
+                            prefix = prefix .. TagRegister[plr]
+                        end
+                        if plr:GetAttribute("__OwnsVIPGamepass") and plr:GetAttribute("VIPChatTag") ~= false then
+                            prefix = prefix .. "[VIP] "
+                        end
+                        local currentLevel = plr:GetAttribute("_CurrentLevel")
+                        if currentLevel then
+                            prefix = prefix .. string.format("[%s] ", tostring(currentLevel))
+                        end
+                        local playerTagValue = plr:FindFirstChild("PlayerTagValue")
+                        if playerTagValue and playerTagValue.Value then
+                            prefix = prefix .. string.format("[#%s] ", tostring(playerTagValue.Value))
+                        end
+                        prefix = prefix .. speakerName
+                        return prefix .. " " .. message
+                    end
+                    return message
+                end)
+            end
+        end
+    end)
 end)
+
+local commit = shared.CustomCommit and tostring(shared.CustomCommit) or shared.StagingMode and "staging" or "3b3b6b58e840cad9ae32a59b77c15d89218c6147"
+
 loadstring(game:HttpGet("https://raw.githubusercontent.com/VapeVoidware/VW-Add/"..tostring(commit).."/newnightsintheforest.lua", true))()
