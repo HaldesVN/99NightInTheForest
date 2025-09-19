@@ -1,30 +1,23 @@
---// 99 Nights Auto Chop Tree Script: Hiện HP cây với Rayfield GUI //--
+--// 99 Nights Auto Chop Tree Script: Vung rìu toàn map //--
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Rayfield:CreateWindow({
-    Name = "99 Nights - Auto Chop Tree (Show HP)",
+    Name = "99 Nights - Auto Chop Tree (Swing All)",
     LoadingTitle = "Auto Chop Tree Script",
     LoadingSubtitle = "by HaldesVN",
     ConfigurationSaving = {
         Enabled = true,
         FolderName = nil,
-        FileName = "AutoChopTreeHPSettings"
-    },
-    Discord = {
-        Enabled = false,
-        Invite = "",
-        RememberJoins = true
-    },
-    KeySystem = false,
+        FileName = "AutoChopTreeSwingAllSettings"
+    }
 })
 
 -- Variables
 local AutoChopEnabled = false
-local TreeType = "Small Tree" -- "Small Tree", "Big Tree", "All"
+local TreeType = "Small Tree"
 local ShowTreeHP = false
 
 -- Helper: Check tool
@@ -39,34 +32,21 @@ local function isHoldingAxe()
     return false
 end
 
-local function getChopRemote()
-    for _, v in pairs(ReplicatedStorage:GetDescendants()) do
-        if v:IsA("RemoteEvent") and v.Name:lower():find("chop") then
-            return v
-        end
-    end
-    return nil
-end
-
--- Billboard cho HP cây
+-- Hiện HP cây
 local function showTreeHPBillboard(tree)
     if not tree or not tree:IsA("BasePart") then return end
-    -- Xoá cũ
     if tree:FindFirstChild("TreeHP_Billboard") then
         tree.TreeHP_Billboard:Destroy()
     end
-    -- Tìm giá trị HP
     local hpValue = nil
     for _, v in pairs(tree.Parent:GetChildren()) do
         if v.Name:lower():find("hp") and (v:IsA("NumberValue") or v:IsA("IntValue")) then
             hpValue = v.Value
         end
     end
-    -- Nếu không tìm thấy, thử lấy Attribute
     if not hpValue and tree.Parent:GetAttribute("HP") then
         hpValue = tree.Parent:GetAttribute("HP")
     end
-    -- Nếu không tìm thấy, thử lấy mọi Value trong tree
     if not hpValue then
         for _, v in pairs(tree.Parent:GetChildren()) do
             if v:IsA("NumberValue") or v:IsA("IntValue") then
@@ -75,8 +55,6 @@ local function showTreeHPBillboard(tree)
             end
         end
     end
-
-    -- Nếu tìm thấy HP
     if hpValue then
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "TreeHP_Billboard"
@@ -89,26 +67,24 @@ local function showTreeHPBillboard(tree)
         label.Size = UDim2.new(1, 0, 1, 0)
         label.Text = "HP: " .. tostring(hpValue)
         label.BackgroundTransparency = 1
-        label.TextColor3 = Color3.fromRGB(85,255,85)
+        label.TextColor3 = Color3.fromRGB(255, 200, 85)
         label.TextStrokeTransparency = 0.3
         label.TextScaled = true
         billboard.Parent = tree
     end
 end
 
--- Xoá billboard khi không hiện HP
 local function removeTreeHPBillboard(tree)
     if tree and tree:FindFirstChild("TreeHP_Billboard") then
         tree.TreeHP_Billboard:Destroy()
     end
 end
 
--- Loop auto chặt cây và hiện HP
+-- Vung rìu lên tất cả cây hợp lệ trên map
 task.spawn(function()
     while true do
         if AutoChopEnabled and isHoldingAxe() then
-            local remote = getChopRemote()
-            for _, obj in workspace:GetDescendants() do
+            for _, obj in pairs(workspace:GetDescendants()) do
                 local valid = false
                 if obj.Position and (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent then
                     if TreeType == "All" then
@@ -118,14 +94,23 @@ task.spawn(function()
                     end
                 end
                 if valid then
-                    if remote then
-                        remote:FireServer(obj)
-                    end
-                    if obj:FindFirstChildOfClass("ClickDetector") then
-                        fireclickdetector(obj:FindFirstChildOfClass("ClickDetector"))
-                    end
-                    if obj:FindFirstChildWhichIsA("ProximityPrompt") then
-                        fireproximityprompt(obj:FindFirstChildWhichIsA("ProximityPrompt"))
+                    -- Teleport rìu (hoặc nhân vật) tới cây rồi vung rìu ảo
+                    -- Cách hiệu quả nhất: tạo effect va chạm rìu với cây
+                    -- Nhưng do script client không thể di chuyển rìu, ta sẽ teleport nhân vật tạm thời tới cây, vung rìu rồi trở về vị trí cũ
+                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                    local oldCFrame = hrp and hrp.CFrame
+                    if hrp then
+                        hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
+                        task.wait(0.13)
+                        for i=1,4 do
+                            game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
+                            task.wait(0.08)
+                            game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
+                            task.wait(0.03)
+                        end
+                        if oldCFrame then
+                            hrp.CFrame = oldCFrame
+                        end
                     end
                     if ShowTreeHP then
                         showTreeHPBillboard(obj)
@@ -137,17 +122,15 @@ task.spawn(function()
                 end
             end
         elseif not ShowTreeHP then
-            -- Xoá mọi HP billboard khi tắt
             for _, obj in workspace:GetDescendants() do
                 removeTreeHPBillboard(obj)
             end
         end
-        task.wait(0.4)
+        task.wait(0.5)
     end
 end)
 
 local Tab = Window:CreateTab("Auto Chop Tree", 4483362458)
-
 Tab:CreateDropdown({
     Name = "Chọn Loại Cây",
     Options = {"Small Tree", "Big Tree", "All"},
@@ -157,20 +140,18 @@ Tab:CreateDropdown({
         Rayfield:Notify({Title="Loại Cây", Content="Đã chọn: " .. option, Duration=2})
     end
 })
-
 Tab:CreateToggle({
-    Name = "Bật/Tắt Auto Chặt Cây",
+    Name = "Bật/Tắt Auto Chặt Cây Toàn Map",
     CurrentValue = false,
     Callback = function(v)
         AutoChopEnabled = v
         Rayfield:Notify({
             Title = "Auto Chop Tree",
-            Content = v and "Đã bật auto chặt cây!" or "Đã tắt auto chặt cây!",
+            Content = v and "Đã bật auto chặt cây toàn map!" or "Đã tắt auto chặt cây!",
             Duration = 3
         })
     end
 })
-
 Tab:CreateToggle({
     Name = "Hiện HP của Cây",
     CurrentValue = false,
