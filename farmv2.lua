@@ -1,38 +1,37 @@
---// 99 Nights Auto Chop Tree Script: Vung rìu toàn map //--
+--// 99 Nights in the Forest: Auto Chop All Trees Script //--
+-- Features: Chop all trees on map, choose tree type, show HP, Rayfield GUI
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 local Window = Rayfield:CreateWindow({
-    Name = "99 Nights - Auto Chop Tree (Swing All)",
+    Name = "99 Nights - Auto Chop All Trees",
     LoadingTitle = "Auto Chop Tree Script",
     LoadingSubtitle = "by HaldesVN",
     ConfigurationSaving = {
         Enabled = true,
-        FolderName = nil,
-        FileName = "AutoChopTreeSwingAllSettings"
+        FolderName = "99NightsAutoChop",
+        FileName = "Settings"
     }
 })
 
--- Variables
 local AutoChopEnabled = false
 local TreeType = "Small Tree"
 local ShowTreeHP = false
+local TeleportDelay = 0.16
 
--- Helper: Check tool
 local function isHoldingAxe()
     local char = LocalPlayer.Character
-    if char then
-        local tool = char:FindFirstChildOfClass("Tool")
-        if tool and tool.Name:lower():find("axe") then
-            return true
-        end
-    end
-    return false
+    return char and char:FindFirstChildOfClass("Tool") and char:FindFirstChildOfClass("Tool").Name:lower():find("axe")
 end
 
--- Hiện HP cây
+local function getHRP()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+-- Billboard HP
 local function showTreeHPBillboard(tree)
     if not tree or not tree:IsA("BasePart") then return end
     if tree:FindFirstChild("TreeHP_Billboard") then
@@ -62,7 +61,6 @@ local function showTreeHPBillboard(tree)
         billboard.Size = UDim2.new(0, 80, 0, 30)
         billboard.AlwaysOnTop = true
         billboard.StudsOffset = Vector3.new(0, 3, 0)
-
         local label = Instance.new("TextLabel", billboard)
         label.Size = UDim2.new(1, 0, 1, 0)
         label.Text = "HP: " .. tostring(hpValue)
@@ -80,45 +78,42 @@ local function removeTreeHPBillboard(tree)
     end
 end
 
--- Vung rìu lên tất cả cây hợp lệ trên map
 task.spawn(function()
     while true do
         if AutoChopEnabled and isHoldingAxe() then
-            for _, obj in pairs(workspace:GetDescendants()) do
-                local valid = false
-                if obj.Position and (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent then
-                    if TreeType == "All" then
-                        if obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree" then valid = true end
-                    else
-                        if obj.Parent.Name == TreeType then valid = true end
+            local hrp = getHRP()
+            if hrp then
+                local oldCFrame = hrp.CFrame
+                for _, obj in workspace:GetDescendants() do
+                    local valid = false
+                    if obj.Position and (obj.Name == "Trunk" or obj.Name == "Main") and obj.Parent then
+                        if TreeType == "All" then
+                            if obj.Parent.Name == "Small Tree" or obj.Parent.Name == "Big Tree" then valid = true end
+                        else
+                            if obj.Parent.Name == TreeType then valid = true end
+                        end
                     end
-                end
-                if valid then
-                    -- Teleport rìu (hoặc nhân vật) tới cây rồi vung rìu ảo
-                    -- Cách hiệu quả nhất: tạo effect va chạm rìu với cây
-                    -- Nhưng do script client không thể di chuyển rìu, ta sẽ teleport nhân vật tạm thời tới cây, vung rìu rồi trở về vị trí cũ
-                    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-                    local oldCFrame = hrp and hrp.CFrame
-                    if hrp then
+                    if valid then
+                        -- Teleport to tree, swing axe, return to old position
                         hrp.CFrame = obj.CFrame + Vector3.new(0, 3, 0)
-                        task.wait(0.13)
-                        for i=1,4 do
+                        task.wait(TeleportDelay)
+                        for i=1,5 do
                             game:GetService("VirtualInputManager"):SendKeyEvent(true, Enum.KeyCode.F, false, game)
                             task.wait(0.08)
                             game:GetService("VirtualInputManager"):SendKeyEvent(false, Enum.KeyCode.F, false, game)
-                            task.wait(0.03)
+                            task.wait(0.04)
                         end
                         if oldCFrame then
                             hrp.CFrame = oldCFrame
                         end
-                    end
-                    if ShowTreeHP then
-                        showTreeHPBillboard(obj)
-                    else
+                        if ShowTreeHP then
+                            showTreeHPBillboard(obj)
+                        else
+                            removeTreeHPBillboard(obj)
+                        end
+                    elseif ShowTreeHP == false then
                         removeTreeHPBillboard(obj)
                     end
-                elseif ShowTreeHP == false then
-                    removeTreeHPBillboard(obj)
                 end
             end
         elseif not ShowTreeHP then
@@ -126,7 +121,7 @@ task.spawn(function()
                 removeTreeHPBillboard(obj)
             end
         end
-        task.wait(0.5)
+        task.wait(0.6)
     end
 end)
 
